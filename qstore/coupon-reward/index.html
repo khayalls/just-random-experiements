@@ -9,8 +9,10 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:wght@400;500;700&display=swap">
 <style>
-/* Layout: the 1440x900 Figma screen ("Register - otp" frame), scaled to fit the window
-   like Figma's zoom-to-fit. Below 760px wide it reflows into a fluid phone layout. */
+/* Layout: the Figma frame "07 / 10 AZN Off" (1801x1084) with the 1440x900 screen
+   centred in it (180px side margins, 92px top and bottom). The whole frame is scaled
+   to fit the window, so the margins keep Figma's proportions. Below 760px wide it
+   reflows into a fluid phone layout. */
 :root {
   --canvas: #f7f7f7;
   --surface: #ffffff;
@@ -437,17 +439,18 @@ body.is-fluid { overflow: auto; }
 
 <script>
 (() => {
-  const SCREEN_W = 1440, SCREEN_H = 900, GUTTER = 32, FLUID_BELOW = 760;
+  // Figma frame "07 / 10 AZN Off": 1801x1084, screen centred inside it
+  const FRAME_W = 1801, FRAME_H = 1084, FLUID_BELOW = 760;
   const root = document.documentElement;
   const presentation = document.getElementById('presentation');
 
-  /* ---- Fit the 1440x900 screen into the window, like Figma's zoom-to-fit ---- */
+  /* ---- Fit the Figma frame into the window, keeping its margins around the screen ---- */
   function fit() {
     const w = window.innerWidth, h = window.innerHeight;
     const fluid = w < FLUID_BELOW;
     document.body.classList.toggle('is-fluid', fluid);
     if (fluid) return;
-    const s = Math.min((w - GUTTER * 2) / SCREEN_W, (h - GUTTER * 2) / SCREEN_H);
+    const s = Math.min(w / FRAME_W, h / FRAME_H);
     presentation.style.setProperty('--fit', Math.max(s, 0.2).toFixed(4));
   }
   window.addEventListener('resize', fit);
