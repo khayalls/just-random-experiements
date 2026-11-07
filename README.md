@@ -4,29 +4,42 @@ A scratchpad for small, self-contained experiments pulled from different project
 
 Nothing here is a product. Each experiment is a throwaway or a starting point. It is kept so the idea and the code are easy to find again later.
 
+## Projects
+
+| Project | Parts |
+| --- | --- |
+| [QStore](qstore/) | [coupon-reward](qstore/coupon-reward/) |
+
 ## Layout
 
-Each experiment gets its own folder at the root of the repository and does not depend on the others:
+Experiments are grouped by the project they come from. Inside a project, each part gets its own folder:
 
 ```
 just-random-experiements/
-├── <experiment-name>/
-│   ├── README.md      # what it is, where it came from, how to run it
-│   └── ...            # the experiment's own files and assets
-└── README.md
+├── <project>/
+│   ├── README.md          # what the project is, and a table of its parts
+│   ├── <part>/
+│   │   ├── README.md      # what it tries out, how to run it, design links
+│   │   ├── index.html     # or whatever the experiment needs
+│   │   └── assets/
+│   └── <another-part>/
+└── README.md              # this file
 ```
 
-Name folders in lowercase kebab-case after the idea, with the source project as a prefix if it helps (for example `qstore-coupon-reward`).
+- Use lowercase kebab-case folder names: `qstore/coupon-reward`, not `QStore/CouponReward`.
+- Name a part after the screen, component or idea it tries out.
+- Use `misc/` for one-off experiments that don't belong to any project.
 
 ## Adding an experiment
 
-1. Create a new folder for it.
-2. Add a short `README.md` covering:
-   - what the experiment tries out
-   - which project it came from, if any
+1. Use the project's folder, or create one with a short `README.md` if it's a new project.
+2. Create a folder for the part inside it.
+3. Add a `README.md` to the part covering:
+   - what it tries out
    - how to run it (for example `python3 -m http.server` in the folder, then open the printed URL)
-   - links to related designs or references
-3. Keep its dependencies inside the folder, so it runs without the rest of the repository.
+   - links to related designs, references or a live preview
+4. Keep the part's dependencies and assets inside its folder, so it runs without the rest of the repository.
+5. Add a row to the project's table and to the **Projects** table above.
 
 ## Status
 

@@ -1,4 +1,4 @@
-# qstore-coupon-reward
+# QStore · Coupon reward
 
 The QStore "Your account is ready" screen (Qarabağ FK) built from the Figma frame `07 / 10 AZN Off` (node `1081:18437`), with a 3D hover on the coupon.
 
@@ -16,7 +16,7 @@ The QStore "Your account is ready" screen (Qarabağ FK) built from the Figma fra
 ## Run it
 
 ```bash
-cd qstore-coupon-reward
+cd qstore/coupon-reward
 python3 -m http.server 8837
 ```
 
