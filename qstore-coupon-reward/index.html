@@ -1,0 +1,545 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>QStore Coupon Reward</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:wght@400;500;700&display=swap">
+<style>
+/* Layout: the 1440x900 Figma screen ("Register - otp" frame), scaled to fit the window
+   like Figma's zoom-to-fit. Below 760px wide it reflows into a fluid phone layout. */
+:root {
+  --canvas: #f7f7f7;
+  --surface: #ffffff;
+  --content-primary: #121212;
+  --content-secondary: #616161;
+  --action-primary-bg: #080808;
+  --action-primary-text: #ffffff;
+  --gold-300: #f1c68c;
+  --gold-400: #eaab56;
+  --gold-700: #a86813;
+  --warning-400: #f8b74a;
+  --warning-500: #f59e0b;
+  --warning-600: #d88b0a;
+  --warning-800: #8e5c06;
+  --font: "Google Sans Flex", "Google Sans", "Helvetica Neue", Arial, sans-serif;
+  --screen-w: 1440px;
+  --screen-h: 900px;
+  --gutter: 32px;
+  color-scheme: light;
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--canvas);
+  color: var(--content-primary);
+  font-family: var(--font);
+  font-variation-settings: "GRAD" 0, "ROND" 0, "wdth" 100;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+p { margin: 0; }
+img { display: block; max-width: none; }
+
+/* ---------- Presentation (fit to window) ---------- */
+.presentation {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  width: var(--screen-w);
+  height: var(--screen-h);
+  transform: translate(-50%, -50%) scale(var(--fit, .5));
+  transform-origin: 50% 50%;
+}
+
+/* ---------- Screen ---------- */
+.screen {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: var(--surface);
+  border-radius: 24px;
+  overflow: hidden;
+  /* Figma: 5-layer soft shadow cast down-right */
+  box-shadow:
+    462px 385px 168px 0 rgba(0, 0, 0, 0),
+    296px 246px 154px 0 rgba(0, 0, 0, .01),
+    166px 139px 130px 0 rgba(0, 0, 0, .03),
+     74px  62px  96px 0 rgba(0, 0, 0, .05),
+     18px  15px  53px 0 rgba(0, 0, 0, .06);
+}
+
+.header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 32px;
+}
+.club-logo { width: 31px; height: 40px; object-fit: cover; }
+.help {
+  display: inline-flex;
+  flex-direction: column;
+  padding: 2px 0;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 500;
+  color: var(--content-primary);
+  text-decoration: none;
+}
+.help::after { content: ""; height: 1px; margin-top: -1px; background: currentColor; }
+.help:focus-visible { outline: 2px solid var(--content-primary); outline-offset: 4px; border-radius: 2px; }
+
+.content {
+  flex: 1 0 0;
+  min-height: 1px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 96px 0;
+}
+.card {
+  width: 400px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 56px;
+}
+.offer-group {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 32px;
+}
+.intro {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: center;
+}
+.intro h1 {
+  margin: 0;
+  font-size: 28px;
+  line-height: 36px;
+  font-weight: 500;
+  letter-spacing: -.5px;
+  text-wrap: balance;
+}
+.intro p {
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--content-secondary);
+}
+
+/* ---------- Coupon + 3D hover ---------- */
+.hover-3d {
+  perspective: 1100px;
+  /* extra hit area so the tilt starts a little before the pointer reaches the card */
+  padding: 24px;
+  margin: -24px;
+  touch-action: pan-y;
+}
+.coupon {
+  --rx: 0deg;
+  --ry: 0deg;
+  --lift: 0px;
+  --light-x: 50%;
+  --light-y: 30%;
+  --bevel-x: 0px;
+  --bevel-y: 0px;
+  --cast-x: 0px;
+  --cast-y: 0px;
+  --edge-angle: 125deg;
+  --shine-strength: .2;
+  --para-x: 0px;
+  --para-y: 0px;
+
+  position: relative;
+  padding: 6px;
+  border-radius: 36px;
+  background-image: linear-gradient(124.95deg,
+    var(--warning-400) 9.63%, var(--gold-300) 27.58%, var(--warning-500) 58.46%,
+    var(--gold-400) 73.93%, var(--warning-600) 99.8%);
+  transform: rotateX(var(--rx)) rotateY(var(--ry)) translateZ(var(--lift));
+  /* Figma drop shadow; the two closest layers follow the light (cast) */
+  filter:
+    drop-shadow(0 251px 35px rgba(0, 0, 0, 0))
+    drop-shadow(calc(var(--cast-x) * .4) calc(161px + var(--cast-y) * .4) 32px rgba(0, 0, 0, .01))
+    drop-shadow(calc(var(--cast-x) * .7) calc(90px + var(--cast-y) * .7) 27px rgba(0, 0, 0, .05))
+    drop-shadow(var(--cast-x) calc(40px + var(--cast-y)) 20px rgba(0, 0, 0, .09))
+    drop-shadow(calc(var(--cast-x) * .5) calc(10px + var(--cast-y) * .5) 11px rgba(0, 0, 0, .1));
+}
+/* rim highlight that rotates with the tilt */
+.coupon::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.5px;
+  background: linear-gradient(var(--edge-angle), rgba(255, 255, 255, .85), rgba(255, 255, 255, 0) 38%, rgba(255, 255, 255, 0) 62%, rgba(120, 70, 0, .35));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  pointer-events: none;
+  opacity: .7;
+}
+
+.coupon-face {
+  position: relative;
+  width: 332px;
+  height: 403px;
+  border-radius: 32px;
+  overflow: hidden;
+  background-image: linear-gradient(208.63deg,
+    var(--warning-400) 1.02%, var(--gold-300) 33.79%, var(--warning-500) 61.01%,
+    var(--gold-400) 74.63%, var(--warning-600) 97.42%);
+  /* pressed-in bevel between frame and face, offset by the light */
+  box-shadow:
+    inset calc(var(--bevel-x) * -1) calc(var(--bevel-y) * -1) 1.5px rgba(255, 236, 200, .7),
+    inset var(--bevel-x) var(--bevel-y) 2px rgba(120, 70, 0, .28);
+}
+.face-art {
+  position: absolute;
+  inset: 0;
+  transform: translate(var(--para-x), var(--para-y));
+}
+.face-art > * { position: absolute; }
+.hanger  { left: 130px; top: 16px;  width: 72px;  height: 31px; }
+.gift-divider { left: 20px; top: 79px; width: 292px; height: 32px; }
+.divider { left: 20px; top: 297px; width: 292px; height: 2px; }
+.amount {
+  left: 20px;
+  top: 131px;
+  width: 292px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  font-weight: 700;
+  color: var(--gold-700);
+  letter-spacing: -1.5px;
+}
+.amount .value { font-size: 72px; line-height: 76px; width: 100%; }
+.amount .unit  { font-size: 60px; line-height: 64px; width: 100%; }
+.caption {
+  left: 168px;
+  top: 331px;
+  width: 296px;
+  transform: translateX(-50%);
+  text-align: center;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 500;
+  color: var(--warning-800);
+}
+
+/* lighting layers, painted over the art */
+.light, .shine {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+}
+.light {
+  background: radial-gradient(circle at var(--light-x) var(--light-y),
+    rgba(255, 255, 255, calc(var(--shine-strength) * 2.2)) 0%,
+    rgba(255, 255, 255, 0) 55%),
+    radial-gradient(circle at calc(100% - var(--light-x)) calc(100% - var(--light-y)),
+    rgba(110, 60, 0, calc(var(--shine-strength) * .9)) 0%,
+    rgba(110, 60, 0, 0) 60%);
+  mix-blend-mode: soft-light;
+}
+.shine { opacity: 0; }
+
+/* materials: ?material=soft|gloss|foil (or #soft, #gloss, #foil) */
+[data-material="gloss"] .light { mix-blend-mode: overlay; }
+[data-material="gloss"] .shine {
+  opacity: 1;
+  background: linear-gradient(calc(var(--edge-angle) + 90deg),
+    rgba(255, 255, 255, 0) calc(var(--light-x) - 22%),
+    rgba(255, 255, 255, calc(var(--shine-strength) * 2.4)) var(--light-x),
+    rgba(255, 255, 255, 0) calc(var(--light-x) + 22%));
+  mix-blend-mode: screen;
+}
+[data-material="foil"] .shine {
+  opacity: calc(var(--shine-strength) * 3);
+  background:
+    repeating-linear-gradient(calc(var(--edge-angle) - 20deg),
+      #ff9ad5 0%, #ffe28a 8%, #8affc8 16%, #8ad8ff 24%, #c69aff 32%, #ff9ad5 40%);
+  background-size: 260% 260%;
+  background-position: var(--light-x) var(--light-y);
+  mix-blend-mode: color-dodge;
+}
+
+.coupon.is-settling { transition: transform .6s cubic-bezier(.2, .8, .2, 1), filter .6s cubic-bezier(.2, .8, .2, 1); }
+
+/* ---------- Actions ---------- */
+.actions {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 24px;
+  border: 0;
+  border-radius: 999px;
+  font: 500 16px/24px var(--font);
+  cursor: pointer;
+  background: transparent;
+  color: var(--content-primary);
+  transition: background-color .15s ease, transform .15s ease;
+}
+.btn:active { transform: scale(.985); }
+.btn:focus-visible { outline: 2px solid var(--content-primary); outline-offset: 3px; }
+.btn-primary { background: var(--action-primary-bg); color: var(--action-primary-text); }
+.btn-primary:hover { background: #262626; }
+.btn-secondary:hover { background: rgba(0, 0, 0, .04); }
+
+.footer {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  padding: 16px 0;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--content-secondary);
+  white-space: nowrap;
+}
+
+/* ---------- Material switcher (outside the design) ---------- */
+.materials {
+  position: fixed;
+  left: max(16px, env(safe-area-inset-left, 0px));
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .8);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .06), 0 4px 16px rgba(0, 0, 0, .06);
+  backdrop-filter: blur(8px);
+  z-index: 2;
+}
+.materials button {
+  border: 0;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font: 500 12px/16px var(--font);
+  letter-spacing: .02em;
+  color: var(--content-secondary);
+  background: transparent;
+  cursor: pointer;
+}
+.materials button[aria-pressed="true"] { background: var(--action-primary-bg); color: var(--action-primary-text); }
+.materials button:focus-visible { outline: 2px solid var(--content-primary); outline-offset: 1px; }
+
+/* ---------- Phone: fluid layout instead of scaling ---------- */
+body.is-fluid { overflow: auto; }
+.is-fluid .presentation {
+  position: static;
+  width: auto;
+  height: auto;
+  min-height: 100%;
+  transform: none;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 16px 72px;
+}
+.is-fluid .screen { min-height: calc(100vh - 88px); height: auto; box-shadow: 4px 6px 24px rgba(0, 0, 0, .06); }
+.is-fluid .header { padding: 16px 20px; }
+.is-fluid .content { padding: 24px 16px 32px; }
+.is-fluid .card { width: 100%; max-width: 400px; gap: 40px; }
+.is-fluid .footer { white-space: normal; text-align: center; padding: 16px; }
+@media (max-width: 420px) {
+  .is-fluid .hover-3d { zoom: .86; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .coupon, .coupon.is-settling { transition: none; }
+}
+</style>
+</head>
+<body>
+<main class="presentation" id="presentation">
+  <section class="screen" aria-label="QStore profile reward">
+    <header class="header">
+      <img class="club-logo" src="assets/logo.png" width="31" height="40" alt="Qarabağ FK">
+      <a class="help" href="#help">Need help?</a>
+    </header>
+
+    <div class="content">
+      <div class="card">
+        <div class="offer-group">
+          <div class="intro">
+            <h1>Your account is ready</h1>
+            <p>Finish your profile and the coupon is yours</p>
+          </div>
+
+          <div class="hover-3d" id="coupon-hover">
+            <div class="coupon" id="coupon" role="img" aria-label="10 AZN off. Seven quick questions. Under a minute.">
+              <div class="coupon-face">
+                <div class="face-art" aria-hidden="true">
+                  <img class="hanger" src="assets/hanger.svg" width="72" height="31" alt="">
+                  <img class="gift-divider" src="assets/gift-divider.svg" width="292" height="32" alt="">
+                  <div class="amount">
+                    <p class="value">10 AZN</p>
+                    <p class="unit">OFF</p>
+                  </div>
+                  <img class="divider" src="assets/divider.svg" width="292" height="2" alt="">
+                  <div class="caption">
+                    <p>Seven quick questions.</p>
+                    <p>Under a minute.</p>
+                  </div>
+                </div>
+                <div class="light" aria-hidden="true"></div>
+                <div class="shine" aria-hidden="true"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="btn btn-primary" type="button" id="complete-profile">Complete my profile</button>
+          <button class="btn btn-secondary" type="button" id="skip">Skip for now</button>
+        </div>
+      </div>
+    </div>
+
+    <footer class="footer">© 2026 QStore · Qarabağ FK. All rights reserved.</footer>
+  </section>
+</main>
+
+<div class="materials" role="group" aria-label="Coupon material">
+  <button type="button" data-set="soft" id="mat-soft">Soft</button>
+  <button type="button" data-set="gloss" id="mat-gloss">Gloss</button>
+  <button type="button" data-set="foil" id="mat-foil">Foil</button>
+</div>
+
+<script>
+(() => {
+  const SCREEN_W = 1440, SCREEN_H = 900, GUTTER = 32, FLUID_BELOW = 760;
+  const root = document.documentElement;
+  const presentation = document.getElementById('presentation');
+
+  /* ---- Fit the 1440x900 screen into the window, like Figma's zoom-to-fit ---- */
+  function fit() {
+    const w = window.innerWidth, h = window.innerHeight;
+    const fluid = w < FLUID_BELOW;
+    document.body.classList.toggle('is-fluid', fluid);
+    if (fluid) return;
+    const s = Math.min((w - GUTTER * 2) / SCREEN_W, (h - GUTTER * 2) / SCREEN_H);
+    presentation.style.setProperty('--fit', Math.max(s, 0.2).toFixed(4));
+  }
+  window.addEventListener('resize', fit);
+  fit();
+
+  /* ---- Material: ?material=soft|gloss|foil or #soft|#gloss|#foil ---- */
+  const MATERIALS = ['soft', 'gloss', 'foil'];
+  const buttons = document.querySelectorAll('.materials button');
+  function readMaterial() {
+    const q = new URLSearchParams(location.search).get('material');
+    const h = location.hash.replace('#', '');
+    return MATERIALS.includes(h) ? h : MATERIALS.includes(q) ? q : 'soft';
+  }
+  function setMaterial(m) {
+    root.dataset.material = m;
+    buttons.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.set === m)));
+  }
+  buttons.forEach(b => b.addEventListener('click', () => {
+    setMaterial(b.dataset.set);
+    try { history.replaceState(null, '', '#' + b.dataset.set); } catch (e) { /* framed */ }
+  }));
+  window.addEventListener('hashchange', () => setMaterial(readMaterial()));
+  setMaterial(readMaterial());
+
+  /* ---- 3D hover ---- */
+  const area = document.getElementById('coupon-hover');
+  const card = document.getElementById('coupon');
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const MAX_TILT = 14;          // degrees
+  const REST = { x: 0, y: 0, lift: 0, shine: 0.2, lx: 0.5, ly: 0.3 };
+  let target = { ...REST }, cur = { ...REST }, raf = 0;
+
+  const SHINE = { soft: 0.32, gloss: 0.42, foil: 0.3 };
+
+  function onMove(e) {
+    if (reduced.matches) return;
+    const r = card.getBoundingClientRect();
+    const px = Math.min(Math.max((e.clientX - r.left) / r.width, 0), 1);
+    const py = Math.min(Math.max((e.clientY - r.top) / r.height, 0), 1);
+    target = {
+      x: (px - 0.5) * 2,       // -1 .. 1, left to right
+      y: (py - 0.5) * 2,       // -1 .. 1, top to bottom
+      lift: 18,
+      shine: SHINE[root.dataset.material] || 0.3,
+      lx: px,
+      ly: py,
+    };
+    card.classList.remove('is-settling');
+    kick();
+  }
+  function onLeave() {
+    target = { ...REST };
+    kick();
+  }
+  function kick() { if (!raf) raf = requestAnimationFrame(step); }
+
+  function step() {
+    raf = 0;
+    const k = 0.14;            // smoothing; lower is floatier
+    let moving = false;
+    for (const key in target) {
+      const d = target[key] - cur[key];
+      cur[key] += d * k;
+      if (Math.abs(d) > 0.001) moving = true;
+    }
+    apply(cur);
+    if (moving) kick();
+  }
+
+  function apply(c) {
+    const s = card.style;
+    s.setProperty('--ry', (c.x * MAX_TILT).toFixed(2) + 'deg');
+    s.setProperty('--rx', (-c.y * MAX_TILT).toFixed(2) + 'deg');
+    s.setProperty('--lift', c.lift.toFixed(1) + 'px');
+    s.setProperty('--light-x', (c.lx * 100).toFixed(2) + '%');
+    s.setProperty('--light-y', (c.ly * 100).toFixed(2) + '%');
+    // bevel catches light from the pointer side
+    s.setProperty('--bevel-x', (c.x * 1.2).toFixed(2) + 'px');
+    s.setProperty('--bevel-y', (0.9 + c.y * 1.2).toFixed(2) + 'px');
+    // shadow is cast away from the pointer and grows with the lift
+    s.setProperty('--cast-x', (-c.x * 14).toFixed(2) + 'px');
+    s.setProperty('--cast-y', (-c.y * 10 + c.lift * 0.5).toFixed(2) + 'px');
+    s.setProperty('--edge-angle', (125 + Math.atan2(c.y, c.x || 0.0001) * 180 / Math.PI * 0.35).toFixed(2) + 'deg');
+    s.setProperty('--shine-strength', c.shine.toFixed(3));
+    // printed art floats slightly above the face
+    s.setProperty('--para-x', (c.x * 3).toFixed(2) + 'px');
+    s.setProperty('--para-y', (c.y * 3).toFixed(2) + 'px');
+  }
+
+  area.addEventListener('pointermove', onMove);
+  area.addEventListener('pointerdown', onMove);
+  area.addEventListener('pointerleave', onLeave);
+  area.addEventListener('pointercancel', onLeave);
+  window.addEventListener('blur', onLeave);
+  apply(cur);
+})();
+</script>
+</body>
+</html>
