@@ -166,11 +166,7 @@ img { display: block; max-width: none; }
   --para-y: 0px;
 
   position: relative;
-  padding: 6px;
   border-radius: 36px;
-  background-image: linear-gradient(124.95deg,
-    var(--warning-400) 9.63%, var(--gold-300) 27.58%, var(--warning-500) 58.46%,
-    var(--gold-400) 73.93%, var(--warning-600) 99.8%);
   transform: rotateX(var(--rx)) rotateY(var(--ry)) translateZ(var(--lift));
   /* Figma drop shadow; the two closest layers follow the light (cast) */
   filter:
@@ -180,8 +176,38 @@ img { display: block; max-width: none; }
     drop-shadow(var(--cast-x) calc(40px + var(--cast-y)) 20px rgba(0, 0, 0, .09))
     drop-shadow(calc(var(--cast-x) * .5) calc(10px + var(--cast-y) * .5) 11px rgba(0, 0, 0, .1));
 }
+/* The card itself. The Euro slot is punched out with a mask, so the page
+   (and the card's own shadow) shows through the hole. The mask sits on this
+   inner element so it doesn't clip the drop shadow on .coupon. */
+.coupon-body {
+  --slot-x: 136px;   /* 6px frame + 130px from Figma */
+  --slot-y: 22px;    /* 6px frame + 16px */
+  position: relative;
+  padding: 6px;
+  border-radius: 36px;
+  background-image: linear-gradient(124.95deg,
+    var(--warning-400) 9.63%, var(--gold-300) 27.58%, var(--warning-500) 58.46%,
+    var(--gold-400) 73.93%, var(--warning-600) 99.8%);
+  -webkit-mask:
+    url("assets/hanger.svg") var(--slot-x) var(--slot-y) / 72px 31px no-repeat,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask:
+    url("assets/hanger.svg") var(--slot-x) var(--slot-y) / 72px 31px no-repeat exclude,
+    linear-gradient(#000 0 0);
+}
+/* cut edge around the slot: shaded where the card's thickness faces the light */
+.slot-edge {
+  position: absolute;
+  left: var(--slot-x);
+  top: var(--slot-y);
+  width: 72px;
+  height: 31px;
+  overflow: visible;
+  pointer-events: none;
+}
 /* rim highlight that rotates with the tilt */
-.coupon::before {
+.coupon-body::before {
   content: "";
   position: absolute;
   inset: 0;
@@ -193,6 +219,7 @@ img { display: block; max-width: none; }
           mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
   pointer-events: none;
   opacity: .7;
+  z-index: 1;
 }
 
 .coupon-face {
@@ -215,7 +242,6 @@ img { display: block; max-width: none; }
   transform: translate(var(--para-x), var(--para-y));
 }
 .face-art > * { position: absolute; }
-.hanger  { left: 130px; top: 16px;  width: 72px;  height: 31px; }
 .gift-divider { left: 20px; top: 79px; width: 292px; height: 32px; }
 .divider { left: 20px; top: 297px; width: 292px; height: 2px; }
 .amount {
@@ -366,9 +392,9 @@ body.is-fluid { overflow: auto; }
 
           <div class="hover-3d" id="coupon-hover">
             <div class="coupon" id="coupon" role="img" aria-label="10 AZN off. Seven quick questions. Under a minute.">
+              <div class="coupon-body">
               <div class="coupon-face">
                 <div class="face-art" aria-hidden="true">
-                  <img class="hanger" src="assets/hanger.svg" width="72" height="31" alt="">
                   <img class="gift-divider" src="assets/gift-divider.svg" width="292" height="32" alt="">
                   <div class="amount">
                     <p class="value">10 AZN</p>
@@ -382,6 +408,17 @@ body.is-fluid { overflow: auto; }
                 </div>
                 <div class="light" aria-hidden="true"></div>
                 <div class="shine" aria-hidden="true"></div>
+              </div>
+              <svg class="slot-edge" width="72" height="31" viewBox="0 0 72 31" aria-hidden="true">
+                <defs>
+                  <linearGradient id="slot-edge-shade" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0" stop-color="#7a4700" stop-opacity=".55"/>
+                    <stop offset=".55" stop-color="#7a4700" stop-opacity=".18"/>
+                    <stop offset="1" stop-color="#fff4dc" stop-opacity=".9"/>
+                  </linearGradient>
+                </defs>
+                <path d="M36 0C41.877 0 47.0003 3.99965 48.4258 9.70117C48.6163 10.4644 49.302 11 50.0887 11H62C67.5229 11 72 15.4772 72 21C72 26.5228 67.5229 31 62 31H10C4.47715 31 0 26.5228 0 21C0 15.4772 4.47715 11 10 11H21.9113C22.698 11 23.3837 10.4644 23.5742 9.70117C24.9997 3.99965 30.123 0 36 0Z" fill="none" stroke="url(#slot-edge-shade)" stroke-width="3"/>
+              </svg>
               </div>
             </div>
           </div>
