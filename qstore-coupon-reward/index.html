@@ -322,33 +322,6 @@ img { display: block; max-width: none; }
   white-space: nowrap;
 }
 
-/* ---------- Material switcher (outside the design) ---------- */
-.materials {
-  position: fixed;
-  left: max(16px, env(safe-area-inset-left, 0px));
-  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
-  display: flex;
-  gap: 2px;
-  padding: 3px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, .8);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, .06), 0 4px 16px rgba(0, 0, 0, .06);
-  backdrop-filter: blur(8px);
-  z-index: 2;
-}
-.materials button {
-  border: 0;
-  border-radius: 999px;
-  padding: 6px 12px;
-  font: 500 12px/16px var(--font);
-  letter-spacing: .02em;
-  color: var(--content-secondary);
-  background: transparent;
-  cursor: pointer;
-}
-.materials button[aria-pressed="true"] { background: var(--action-primary-bg); color: var(--action-primary-text); }
-.materials button:focus-visible { outline: 2px solid var(--content-primary); outline-offset: 1px; }
-
 /* ---------- Phone: fluid layout instead of scaling ---------- */
 body.is-fluid { overflow: auto; }
 .is-fluid .presentation {
@@ -359,9 +332,9 @@ body.is-fluid { overflow: auto; }
   transform: none;
   padding-left: max(16px, env(safe-area-inset-left, 0px));
   padding-right: max(16px, env(safe-area-inset-right, 0px));
-  padding-block: 16px 72px;
+  padding-block: 16px;
 }
-.is-fluid .screen { min-height: calc(100vh - 88px); height: auto; box-shadow: 4px 6px 24px rgba(0, 0, 0, .06); }
+.is-fluid .screen { min-height: calc(100vh - 32px); height: auto; box-shadow: 4px 6px 24px rgba(0, 0, 0, .06); }
 .is-fluid .header { padding: 16px 20px; }
 .is-fluid .content { padding: 24px 16px 32px; }
 .is-fluid .card { width: 100%; max-width: 400px; gap: 40px; }
@@ -425,12 +398,6 @@ body.is-fluid { overflow: auto; }
   </section>
 </main>
 
-<div class="materials" role="group" aria-label="Coupon material">
-  <button type="button" data-set="soft" id="mat-soft">Soft</button>
-  <button type="button" data-set="gloss" id="mat-gloss">Gloss</button>
-  <button type="button" data-set="foil" id="mat-foil">Foil</button>
-</div>
-
 <script>
 (() => {
   const SCREEN_W = 1440, SCREEN_H = 900, GUTTER = 32, FLUID_BELOW = 760;
@@ -451,7 +418,6 @@ body.is-fluid { overflow: auto; }
 
   /* ---- Material: ?material=soft|gloss|foil or #soft|#gloss|#foil ---- */
   const MATERIALS = ['soft', 'gloss', 'foil'];
-  const buttons = document.querySelectorAll('.materials button');
   function readMaterial() {
     const q = new URLSearchParams(location.search).get('material');
     const h = location.hash.replace('#', '');
@@ -459,12 +425,7 @@ body.is-fluid { overflow: auto; }
   }
   function setMaterial(m) {
     root.dataset.material = m;
-    buttons.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.set === m)));
   }
-  buttons.forEach(b => b.addEventListener('click', () => {
-    setMaterial(b.dataset.set);
-    try { history.replaceState(null, '', '#' + b.dataset.set); } catch (e) { /* framed */ }
-  }));
   window.addEventListener('hashchange', () => setMaterial(readMaterial()));
   setMaterial(readMaterial());
 
