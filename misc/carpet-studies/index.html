@@ -1,0 +1,470 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Carpet Studies</title>
+<style>
+  :root {
+    color-scheme: dark;
+    font: 14px/1.4 system-ui, sans-serif;
+    background: #16161b;
+    color: #f5f2fa;
+  }
+  body { margin: 0; }
+  .study-demo { width: 100%; min-height: 100svh; }
+  .study-demo section[data-variant] { height: clamp(390px, 78svh, 900px); }
+  .study-demo section[hidden] { display: none; }
+  .study-switcher {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px 24px;
+    padding: 14px;
+  }
+  .study-choices { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+  .study-choices button {
+    min-height: 44px;
+    border: 1px solid #ffffff31;
+    border-radius: 100px;
+    padding: 8px 14px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+  }
+  .study-choices button[aria-pressed="true"] { color: #17151f; background: #eee7fa; }
+  .study-choices button:hover:not([aria-pressed="true"]) { background: #ffffff19; }
+  .study-level { display: flex; align-items: center; gap: 8px; }
+  .study-level input { width: 104px; accent-color: #c2a8f2; }
+  button { cursor: pointer; }
+  button:focus-visible, input:focus-visible { outline: 2px solid #a98ae1; outline-offset: 3px; }
+</style>
+</head>
+<body>
+<main class="study-demo">
+<div id="carpet-studies" aria-label="Carpet motion studies">
+  <section class="carpet-scene landscape" data-variant="Dithered Landscape" aria-label="Dithered Landscape">
+    <canvas class="cursor-interaction" role="img" aria-label="Rust, indigo and cream yarn knots forming a series of layered, undulating carpet motifs."></canvas>
+    <h2>Woven<br>landscapes.</h2>
+    <button type="button" class="scene-trigger" aria-label="Send a wave through the landscape">Send a wave <span aria-hidden="true">↗</span></button>
+  </section>
+  <section class="carpet-scene diagram" data-variant="Thread Map" aria-label="Thread Map" hidden>
+    <canvas class="cursor-interaction" role="img" aria-label="A geometric carpet medallion assembled from three floating layers of points and connecting threads."></canvas>
+    <button type="button" class="scene-trigger" aria-label="Separate the thread layers">Separate layers <span aria-hidden="true">↗</span></button>
+  </section>
+  <section class="carpet-scene macro" data-variant="Light on Weave" aria-label="Light on Weave" hidden>
+    <canvas class="cursor-interaction" role="img" aria-label="A close view of raised carpet threads and hooked diamonds in grazing amber light."></canvas>
+    <button type="button" class="scene-trigger" aria-label="Sweep light across the weave">Sweep the light <span aria-hidden="true">↗</span></button>
+  </section>
+</div>
+
+<style>
+  @import url("https://fonts.googleapis.com/css2?family=Instrument+Serif&display=swap");
+  #carpet-studies .carpet-scene {
+    position: relative;
+    height: clamp(350px, 60vw, 530px);
+    overflow: hidden;
+    isolation: isolate;
+    font-family: system-ui, sans-serif;
+  }
+  #carpet-studies .carpet-scene[hidden] { display: none; }
+  #carpet-studies canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    touch-action: pan-y;
+  }
+  #carpet-studies .landscape {
+    --text: #242033;
+    --paper: #f4e9d6;
+    --control: #f4e9d6ee;
+    background: var(--paper);
+    color: var(--text);
+  }
+  #carpet-studies .landscape h2 {
+    position: absolute;
+    top: 9%;
+    left: 7%;
+    margin: 0;
+    pointer-events: none;
+    font: 400 clamp(50px, 9vw, 116px)/0.82 "Instrument Serif", "Times New Roman", serif;
+    letter-spacing: -0.06em;
+  }
+  #carpet-studies .diagram {
+    --text: #c6ebe3;
+    --control: #122025f2;
+    background: #0e181d;
+    color: var(--text);
+  }
+  #carpet-studies .macro {
+    --text: #f7d8b1;
+    --control: #271912ed;
+    background: #211710;
+    color: var(--text);
+  }
+  #carpet-studies .scene-trigger {
+    position: absolute;
+    bottom: 16px;
+    left: 16px;
+    min-height: 44px;
+    padding: 0 14px;
+    border: 1px solid currentColor;
+    background: var(--control);
+    color: var(--text);
+    border-radius: 2px;
+    font: 500 12px/1 system-ui, sans-serif;
+  }
+  #carpet-studies .scene-trigger span { margin-left: 8px; }
+  @media (max-width: 540px) {
+    #carpet-studies .carpet-scene { height: 390px; }
+    #carpet-studies .landscape h2 { top: 12%; }
+  }
+</style>
+
+
+
+<nav class="study-switcher" aria-label="Choose a study">
+  <div class="study-choices">
+    <button type="button" data-study-choice aria-pressed="true">Dithered Landscape</button>
+    <button type="button" data-study-choice aria-pressed="false">Thread Map</button>
+    <button type="button" data-study-choice aria-pressed="false">Light on Weave</button>
+  </div>
+</nav>
+<script>
+(() => {
+  const root = document.getElementById('carpet-studies');
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+  const clamp = (x, lo = 0, hi = 1) => Math.max(lo, Math.min(hi, x));
+  const smooth = (x) => {
+    const t = clamp(x);
+    return t * t * (3 - 2 * t);
+  };
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const wrap = (x, size) => ((x % size) + size) % size;
+  const noise = (x, y) => {
+    let n = Math.imul(x + 171, 0x45d9f3b) ^ Math.imul(y + 701, 0x27d4eb2d);
+    n = Math.imul(n ^ (n >>> 16), 0x45d9f3b);
+    return ((n ^ (n >>> 15)) >>> 0) / 4294967296;
+  };
+
+  // Sample the same hand-drawn medallion as colored knots, diagram layers and relief.
+  const tile = document.createElement('canvas');
+  const side = tile.width = tile.height = 240;
+  const ink = tile.getContext('2d');
+  const dyes = ['#28263a','#414f70','#a94136','#d96c40','#e1ab63','#f2d3a1'];
+  const colors = [[40,38,58],[65,79,112],[169,65,54],[217,108,64],[225,171,99],[242,211,161]];
+  const outline = [[0,-91],[15,-91],[15,-76],[33,-57],[49,-72],[72,-72],[72,-49],[57,-33],
+    [76,-15],[91,-15],[91,15],[76,15],[57,33],[72,49],[72,72],[49,72],[33,57],[15,76],[15,91],
+    [-15,91],[-15,76],[-33,57],[-49,72],[-72,72],[-72,49],[-57,33],[-76,15],[-91,15],
+    [-91,-15],[-76,-15],[-57,-33],[-72,-49],[-72,-72],[-49,-72],[-33,-57],[-15,-76],[-15,-91]];
+
+  function polygon(ctx, points, fill, stroke, weight = 1) {
+    ctx.beginPath();
+    points.forEach(([x,y], i) => i ? ctx.lineTo(x,y) : ctx.moveTo(x,y));
+    ctx.closePath();
+    if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+    if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = weight; ctx.stroke(); }
+  }
+
+  function diamond(ctx, size, fill, stroke, weight) {
+    polygon(ctx, [[0,-size],[size,0],[0,size],[-size,0]], fill, stroke, weight);
+  }
+
+  ink.fillStyle = dyes[0];
+  ink.fillRect(0,0,side,side);
+  ink.translate(side / 2, side / 2);
+  polygon(ink, outline, dyes[2], dyes[5], 3);
+  polygon(ink, outline.map(([x,y]) => [x * .84,y * .84]), dyes[1], dyes[4], 2);
+  for (let arm = 0; arm < 4; arm++) {
+    ink.save();
+    ink.rotate(arm * Math.PI / 2);
+    polygon(ink, [[-7,-42],[-14,-55],[-14,-65],[-6,-72],[4,-72],[11,-64],[4,-57],
+      [0,-61],[5,-65],[-4,-66],[-8,-62],[-8,-55],[0,-48]], dyes[5]);
+    polygon(ink, [[16,-26],[39,-63],[61,-63],[61,-39],[26,-16]], dyes[2], dyes[4]);
+    for (let strand = 0; strand < 5; strand++) {
+      ink.beginPath();
+      ink.moveTo(25 + strand * 2, -25 + strand * 1.5);
+      ink.lineTo(42 + strand * 3.5, -60 + strand * 3.6);
+      ink.lineWidth = 1.9;
+      ink.strokeStyle = dyes[strand % 2 ? 3 : 5];
+      ink.stroke();
+    }
+    ink.translate(88,-88);
+    diamond(ink,24,dyes[2],dyes[4],2);
+    for (let petal = 0; petal < 4; petal++) {
+      ink.rotate(Math.PI / 2);
+      polygon(ink, [[-2,-2],[-6,-9],[0,-15],[6,-9],[2,-2]], dyes[3], dyes[5], 1);
+    }
+    diamond(ink,4,dyes[4]);
+    ink.restore();
+  }
+  diamond(ink,44,dyes[5],dyes[0],3);
+  diamond(ink,36,dyes[2],dyes[3],2);
+  diamond(ink,27,dyes[0],dyes[4],2);
+  diamond(ink,18,dyes[1],dyes[5],2);
+  diamond(ink,9,dyes[4],dyes[0],2);
+
+  const pixels = ink.getImageData(0,0,side,side).data;
+  const knots = new Uint8Array(side * side);
+  for (let i = 0; i < knots.length; i++) {
+    let nearest = Infinity;
+    colors.forEach(([r,g,b], index) => {
+      const offset = i * 4;
+      const d = (pixels[offset]-r)**2 + (pixels[offset+1]-g)**2 + (pixels[offset+2]-b)**2;
+      if (d < nearest) { nearest = d; knots[i] = index; }
+    });
+  }
+  function sample(u,v) {
+    return knots[Math.floor(wrap(v,side)) * side + Math.floor(wrap(u,side))];
+  }
+
+  function landscape(ctx,w,h,aim,beat,age) {
+    const sky = ctx.createLinearGradient(0,0,0,h);
+    sky.addColorStop(0,'#f6eddd');
+    sky.addColorStop(.62,'#ebd9c1');
+    sky.addColorStop(1,'#c7a389');
+    ctx.fillStyle = sky;
+    ctx.fillRect(0,0,w,h);
+    const pitch = w > 750 ? 4 : 3.6;
+    const seam = w < 550 ? .55 : .49;
+    const columnWave = [];
+    for (let x = 0; x < w + pitch; x += pitch) {
+      const u = x / w;
+      const lift = aim.light * Math.exp(-(((x - aim.x) / (w * .24)) ** 2)) * .062;
+      const pulse = beat ? Math.sin((Math.abs(x - beat.x) / w - age * .5) * 12) * (1-age) * .035 : 0;
+      columnWave.push({
+        back: seam + .13 + .08 * Math.sin(u * 6.6 + .35) - .13 * u,
+        near: seam + .2 + .13 * Math.sin(u * 6.2 - .35) - .20 * u - lift - pulse,
+      });
+    }
+    const magnification = Math.min(w * .40, 320);
+    const field = ['#252539','#45516e','#ae4a3b','#d77648','#e4ab69','#f4d8ad'];
+    const mist = ['#53465d','#6b6072','#905c63','#ae746a','#ba9785','#ddc3a1'];
+
+    for (let row = 0, y = 0; y < h + pitch; row++, y += pitch) {
+      const v = y / h;
+      for (let col = 0, x = 0; x < w + pitch; col++, x += pitch) {
+        const g = noise(col,row);
+        const {back, near} = columnWave[col];
+        if (v < Math.min(back,near) - pitch/h) {
+          if (g > .78) {
+            ctx.globalAlpha = .09 + g * .08;
+            ctx.fillStyle = '#9d735f';
+            ctx.fillRect(x,y,.75,.75);
+          }
+          continue;
+        }
+        const front = v + (g - .5)*pitch/h > near;
+        if (!front && v < back) continue;
+        const z = v - (front ? near : back);
+        const uu = (x + z * w * .24) / magnification * side + (front ? 70 : 194);
+        const vv = z * 600 / (.69 + 1.15*z) + (front ? 17 : 98);
+        const color = sample(uu,vv);
+        const light = .81 + g * .18 + .19 * Math.sin(uu / 19 + vv / 33);
+        ctx.globalAlpha = clamp(light, .64, 1);
+        ctx.fillStyle = (front ? field : mist)[color];
+        const knot = pitch * (.58 + .44 * g);
+        ctx.fillRect(x-knot/2, y-knot/2, knot, knot * (.72 + g*.28));
+        if (g > .67) {
+          ctx.globalAlpha = .36;
+          ctx.fillStyle = color === 0 ? '#797691' : '#fff1d7';
+          ctx.fillRect(x-knot/2, y-knot/2, knot * .76, .65);
+        }
+      }
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  const layers = [[],[],[]];
+  for (let y = 22; y < 218; y += 4) {
+    for (let x = 22; x < 218; x += 4) {
+      const shade = sample(x,y);
+      if (!shade) continue;
+      const layer = shade === 1 ? 0 : shade < 4 ? 1 : 2;
+      layers[layer].push({x:x-120,y:y-120,shade,g:noise(x,y)});
+    }
+  }
+
+  function diagram(ctx,w,h,aim,beat,age) {
+    ctx.fillStyle = '#101b20';
+    ctx.fillRect(0,0,w,h);
+    const glow = ctx.createRadialGradient(w*.5,h*.49,6,w*.5,h*.49,Math.max(w,h)*.64);
+    glow.addColorStop(0,'#233438');
+    glow.addColorStop(1,'#0c1419');
+    ctx.fillStyle = glow;
+    ctx.fillRect(0,0,w,h);
+
+    ctx.fillStyle = '#547271';
+    ctx.globalAlpha = .24;
+    for (let y = 10; y < h; y += 12) {
+      for (let x = 10; x < w; x += 12) ctx.fillRect(x,y,1,1);
+    }
+    const spread = .78 + aim.light * .22 + (beat ? .56 * Math.sin(Math.PI * age) : 0);
+    const scale = Math.min(w * .00258, h * .00297);
+    const tilt = aim.light * (aim.x / w - .5) * .30;
+    const midX = w*.51;
+    const midY = h*.49;
+    function project(x,y,layer) {
+      const dx = x + y*.51;
+      return [midX + scale * (dx * .89 + (layer - 1)*50*spread),
+        midY + scale * (y * (.57 + tilt) - x*.36 - (layer - 1)*37*spread)];
+    }
+
+    const palette = ['#000','#62a59c','#eb7b58','#fcaa6e','#e7b87f','#f9ddad'];
+    const rails = [[-105,-105],[105,-105],[105,105],[-105,105]];
+    ctx.globalAlpha = .48;
+    ctx.setLineDash([3,5]);
+    for (const [x,y] of rails) {
+      const a = project(x,y,0);
+      const b = project(x,y,2);
+      ctx.beginPath();
+      ctx.moveTo(...a);
+      ctx.lineTo(...b);
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = '#8ea29a';
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
+
+    for (let layer = 0; layer < 3; layer++) {
+      ctx.globalAlpha = .58;
+      polygon(ctx,rails.map(([x,y])=>project(x,y,layer)),null,layer===1 ? '#c77657' : '#578884',1);
+      for (const p of layers[layer]) {
+        const [x,y] = project(p.x,p.y,layer);
+        const attention = aim.light * Math.max(0,1-Math.hypot(x-aim.x,y-aim.y)/95);
+        ctx.globalAlpha = clamp(.44 + p.g*.42 + attention*.38);
+        ctx.fillStyle = palette[p.shade];
+        const size = (p.shade > 3 ? 1.5 : 1.28) * scale * (1 + attention * .34);
+        ctx.fillRect(x-size*.5,y-size*.5,size,size);
+      }
+      ctx.globalAlpha = .95;
+      ctx.fillStyle = layer === 1 ? '#fba575' : '#93c5b4';
+      for (const [x,y] of rails) {
+        const [px,py] = project(x,y,layer);
+        ctx.fillRect(px-2,py-2,4,4);
+      }
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function macro(ctx,w,h,aim,beat,age) {
+    ctx.fillStyle = '#191410';
+    ctx.fillRect(0,0,w,h);
+    const restX = lerp(w*.39,aim.x,aim.light);
+    const restY = lerp(h*.39,aim.y,aim.light);
+    const sweep = beat ? 1 - smooth((age - .52) / .48) : 0;
+    const lampX = beat ? lerp(restX, lerp(beat.x, w*.86, smooth(age / .72)), sweep) : restX;
+    const lampY = beat ? lerp(restY, lerp(beat.y, h*.43, smooth(age / .72)), sweep) : restY;
+    const pitch = w > 650 ? 4.3 : 3.6;
+    const scale = Math.max(w,h) / 365;
+    const r = Math.max(w*.50, 170);
+    const material = [[49,34,28],[72,57,51],[133,58,37],[174,82,48],[184,126,77],[217,166,105]];
+    for (let row = 0, y = 0; y < h + pitch; row++, y += pitch) {
+      for (let col = 0, x = 0; x < w + pitch; col++, x += pitch) {
+        const xx = (x-w*.5)/scale;
+        const yy = (y-h*.53)/scale;
+        const undulate = Math.sin((xx + yy)/37) * 17 + Math.sin(yy/19) * 7;
+        const u = xx*.84 + yy*.51 + 120 + undulate;
+        const v = -xx*.50 + yy*.89 + 118;
+        const border = Math.abs(wrap(v+130,260)-130);
+        let color = sample(u,v);
+        if (border > 106) color = border > 125 || (border > 111 && border < 114) ? 4 :
+          wrap(u + Math.abs(border-121)*2,28) < 12 ? 2 : 0;
+        const g = noise(col,row);
+        const distance = ((x-lampX)/r)**2 + ((y-lampY)/(h*.66))**2;
+        const ridge = .78 + .22 * Math.sin((xx+yy)/20 + .6);
+        const lit = (.32 + .83 * Math.exp(-distance * 1.58)) * ridge;
+        const [red,green,blue] = material[color];
+        const tone = lit * (.72 + g*.46);
+        ctx.fillStyle = 'rgb(' + (red*tone|0) + ',' + (green*tone|0) + ',' + (blue*tone|0) + ')';
+        const shift = (row % 2) * pitch * .44;
+        const len = pitch * (.56 + g*.47);
+        ctx.fillRect(x+shift,y,len,pitch*.85);
+        ctx.fillStyle = 'rgb(' + Math.min(255,red*tone*1.47|0) + ',' +
+          Math.min(255,green*tone*1.40|0) + ',' + Math.min(255,blue*tone*1.27|0) + ')';
+        ctx.fillRect(x+shift,y,len * .88,.88);
+      }
+    }
+  }
+
+  const renderers = [landscape,diagram,macro];
+  [...root.querySelectorAll('.carpet-scene')].forEach((scene,index) => {
+    const canvas = scene.querySelector('canvas');
+    const ctx = canvas.getContext('2d',{alpha:false});
+    const aim = {x:0,y:0,tx:0,ty:0,light:0,on:false};
+    let w = 0, h = 0, raf = 0, beat = null;
+    let last = 0;
+    function queue() {
+      if (!raf && w && h && !scene.hidden) raf = requestAnimationFrame(paint);
+    }
+    function paint(t) {
+      raf = 0;
+      if (scene.hidden) return;
+      const still = reduced.matches;
+      const easing = still ? 1 : 1-Math.exp(-clamp(t-last,10,64)/72);
+      last = t;
+      aim.x = lerp(aim.x,aim.tx,easing);
+      aim.y = lerp(aim.y,aim.ty,easing);
+      aim.light = lerp(aim.light,Number(aim.on),easing);
+      let age = beat ? clamp((t-beat.time)/1400) : 0;
+      if (age >= 1) { beat = null; age = 0; }
+      renderers[index](ctx,w,h,aim,beat,still && beat ? .46 : age);
+      if ((!still && (Math.abs(aim.light - Number(aim.on)) > .012 || Math.hypot(aim.x-aim.tx,aim.y-aim.ty) > .45)) || (beat && !still)) queue();
+    }
+    function size() {
+      if (scene.hidden) return;
+      const rect = canvas.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+      w = rect.width;
+      h = rect.height;
+      const dpr = Math.min(devicePixelRatio || 1,2);
+      canvas.width = Math.round(w*dpr);
+      canvas.height = Math.round(h*dpr);
+      ctx.setTransform(canvas.width/w,0,0,canvas.height/h,0,0);
+      queue();
+    }
+    function position(event) {
+      const rect = canvas.getBoundingClientRect();
+      return [event.clientX - rect.left,event.clientY - rect.top];
+    }
+    function animate(x,y) {
+      const run = beat = {x,y,time:performance.now()};
+      if (reduced.matches) setTimeout(() => {
+        if (beat === run) { beat = null; queue(); }
+      },600);
+      queue();
+    }
+    canvas.addEventListener('pointermove',event => {
+      if (event.pointerType === 'touch') return;
+      const [x,y] = position(event);
+      if (!aim.on && aim.light < .02) { aim.x = x; aim.y = y; }
+      Object.assign(aim,{tx:x,ty:y,on:true});
+      queue();
+    });
+    canvas.addEventListener('pointerleave',() => { aim.on = false; queue(); });
+    canvas.addEventListener('click',event => animate(...position(event)));
+    scene.querySelector('button').addEventListener('click',() => animate(w*.35,h*.53));
+    new ResizeObserver(size).observe(canvas);
+    reduced.addEventListener('change',queue);
+    size();
+  });
+})();
+</script>
+<script>
+(() => {
+  const sections = [...document.querySelectorAll('[data-variant]')];
+  const choices = [...document.querySelectorAll('[data-study-choice]')];
+  choices.forEach((button, index) => {
+    button.addEventListener('click', () => {
+      sections.forEach((section, i) => { section.hidden = i !== index; });
+      choices.forEach((choice, i) => choice.setAttribute('aria-pressed', String(i === index)));
+      document.dispatchEvent(new Event('studychange'));
+    });
+  });
+})();
+</script>
+
+</main>
+</body>
+</html>

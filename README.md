@@ -9,7 +9,7 @@ Nothing here is a product. Each experiment is a throwaway or a starting point. I
 | Project | Parts |
 | --- | --- |
 | [QStore](qstore/) | [coupon-reward](qstore/coupon-reward/) |
-| [Miscellaneous](misc/) | [Carpet Pattern](misc/carpet-pattern/), [Pixel Hands](misc/pixel-hands/), [Square Wave](misc/square-wave/) |
+| [Miscellaneous](misc/) | [Carpet Pattern](misc/carpet-pattern/), [Pixel Hands](misc/pixel-hands/), [Square Wave](misc/square-wave/), [Carpet Studies](misc/carpet-studies/), [Weave Light Studies](misc/weave-light-studies/) |
 
 ## Layout
 
