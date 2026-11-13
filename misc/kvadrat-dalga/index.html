@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="az">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kvadrat dalğa</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --background: light-dark(#f5f2eb, #13131b);
+    --foreground: light-dark(#201e27, #efe8de);
+    --blue: light-dark(#2e5bcb, #779dff);
+    --viz-series-1: var(--blue);
+    background: var(--background);
+    color: var(--foreground);
+    font: 15px/1.4 system-ui, sans-serif;
+  }
+  body { margin: 0; }
+  .demo { min-height: 100svh; display: grid; align-items: center; }
+  .demo > div { min-width: 0; }
+  .viz-row { display: flex; }
+  .btn {
+    background: transparent;
+    color: inherit;
+    border: 1px solid color-mix(in srgb, currentColor 24%, transparent);
+    border-radius: 99px;
+    padding: 10px 16px;
+    min-height: 44px;
+    font: inherit;
+  }
+  .btn:hover { background: color-mix(in srgb, currentColor 9%, transparent); }
+  .btn:focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }
+  .cursor-interaction, button { cursor: pointer; }
+  .demo #xalca-naxisi canvas { height: max(320px, calc(100svh - 64px)); }
+  .demo #piksel-eller canvas { height: max(210px, calc(100svh - 64px)); }
+</style>
+</head>
+<body>
+<main class="demo">
+<div id="kvadrat-dalga">
+  <canvas class="cursor-interaction" role="img" aria-label="Xırda kvadratların yaratdığı burulmuş halqa. Kursoru gəzdirdikdə kvadratlar işıqlanır, toxunduqda dalğa yayılır."></canvas>
+  <div class="viz-row wave-controls">
+    <button class="btn btn-ghost" type="button">Dalğa yarat</button>
+  </div>
+  <span class="wave-ink" hidden></span>
+  <span class="wave-light" hidden></span>
+</div>
+
+<style>
+  #kvadrat-dalga canvas {
+    display: block;
+    width: 100%;
+    height: clamp(244px, 55vw, 410px);
+    touch-action: pan-y;
+  }
+  #kvadrat-dalga .wave-controls {
+    justify-content: center;
+    padding-block: 8px 4px;
+  }
+  #kvadrat-dalga .wave-ink { color: var(--foreground); }
+  #kvadrat-dalga .wave-light { color: var(--viz-series-1, var(--blue, var(--foreground))); }
+</style>
+
+<script>
+(() => {
+  const root = document.getElementById('kvadrat-dalga');
+  const canvas = root.querySelector('canvas');
+  const ctx = canvas.getContext('2d');
+  const button = root.querySelector('button');
+  const inkProbe = root.querySelector('.wave-ink');
+  const lightProbe = root.querySelector('.wave-light');
+  const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
+  const pointer = { x: 0, y: 0, inside: false };
+  const waves = [];
+  let width, height, step, columns, rows, tiles, ink, light;
+  let glow = 0;
+  let frame = 0;
+
+  const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+  const sin = Math.sin;
+  const cos = Math.cos;
+
+  function project(angle, cross) {
+    const twist = angle * 1.5 + 0.65;
+    const radius = 1 + cross * cos(twist);
+    const x = radius * cos(angle);
+    const y = radius * sin(angle) * 0.92;
+    const z = cross * sin(twist) + 0.16 * sin(2 * angle + 0.5);
+    const tiltX = x * 0.96 - z * 0.28;
+    const tiltZ = x * 0.28 + z * 0.96;
+    const tiltY = y * 0.84 - tiltZ * 0.54;
+    return [
+      tiltX * 0.93 + tiltY * 0.37,
+      -tiltX * 0.37 + tiltY * 0.93,
+      y * 0.54 + tiltZ * 0.84,
+    ];
+  }
+
+  function brightness(point, tangent, across) {
+    const ax = tangent[0] - point[0];
+    const ay = tangent[1] - point[1];
+    const az = tangent[2] - point[2];
+    const bx = across[0] - point[0];
+    const by = across[1] - point[1];
+    const bz = across[2] - point[2];
+    const nx = ay * bz - az * by;
+    const ny = az * bx - ax * bz;
+    const nz = ax * by - ay * bx;
+    const illumination = Math.abs(-0.52 * nx - 0.57 * ny + 0.64 * nz) / Math.hypot(nx, ny, nz);
+    return clamp(0.18 + illumination * 0.56 + point[2] * 0.26, 0.12, 0.96);
+  }
+
+  function buildGrid() {
+    tiles = Array.from({ length: columns * rows }, (_, index) => {
+      const x = width / 2 + (index % columns - (columns - 1) / 2) * step;
+      const y = height / 2 + (Math.floor(index / columns) - (rows - 1) / 2) * step;
+      const vignette = clamp(1 - Math.hypot((x - width / 2) / (width * 0.58), (y - height / 2) / (height * 0.62)), 0, 1);
+      return { x, y, vignette, depth: -Infinity, value: 0 };
+    });
+
+    const scale = Math.min(width * 0.345, height * 0.402);
+    for (let a = 0; a < 390; a++) {
+      const angle = a * Math.PI * 2 / 390;
+      for (let b = 0; b <= 38; b++) {
+        const cross = (b / 38 - 0.5) * 0.75;
+        const point = project(angle, cross);
+        const perspective = scale / (1 - point[2] * 0.16);
+        const col = Math.round((columns - 1) / 2 + point[0] * perspective / step);
+        const row = Math.round((rows - 1) / 2 + point[1] * perspective / step);
+        if (col < 0 || col >= columns || row < 0 || row >= rows) continue;
+        const tile = tiles[row * columns + col];
+        if (point[2] <= tile.depth) continue;
+        tile.depth = point[2];
+        tile.value = brightness(point, project(angle + 0.002, cross), project(angle, cross + 0.002));
+      }
+    }
+  }
+
+  function requestDraw() {
+    if (!frame) frame = requestAnimationFrame(draw);
+  }
+
+  function resize() {
+    const bounds = canvas.getBoundingClientRect();
+    width = bounds.width;
+    height = bounds.height;
+    const dpr = Math.min(devicePixelRatio || 1, 2);
+    canvas.width = Math.round(width * dpr);
+    canvas.height = Math.round(height * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    step = width < 410 ? 5 : 7;
+    columns = Math.floor(width / step);
+    rows = Math.floor(height / step);
+    buildGrid();
+    syncTheme();
+  }
+
+  function syncTheme() {
+    ink = getComputedStyle(inkProbe).color;
+    light = getComputedStyle(lightProbe).color;
+    requestDraw();
+  }
+
+  function draw(time) {
+    frame = 0;
+    const target = pointer.inside ? 1 : 0;
+    const distanceToTarget = target - glow;
+    glow = reduceMotion.matches || Math.abs(distanceToTarget) < 0.008
+      ? target
+      : glow + distanceToTarget * 0.21;
+    for (let i = waves.length - 1; i >= 0; i--) {
+      if (time - waves[i].time > (reduceMotion.matches ? 420 : 1020)) waves.splice(i, 1);
+    }
+
+    ctx.clearRect(0, 0, width, height);
+    const reach = clamp(width * 0.18, 64, 125);
+    for (const tile of tiles) {
+      const distance = glow > 0.006 ? Math.hypot(tile.x - pointer.x, tile.y - pointer.y) : reach;
+      const hover = Math.max(0, 1 - distance / reach) ** 2 * glow;
+      let pulse = 0;
+      for (const wave of waves) {
+        const age = Math.max(0, time - wave.time);
+        const radius = reduceMotion.matches ? 42 : age * Math.max(width, height) * 0.00105;
+        const offset = Math.abs(Math.hypot(tile.x - wave.x, tile.y - wave.y) - radius);
+        const decay = Math.max(0, 1 - age / (reduceMotion.matches ? 420 : 1020));
+        pulse += Math.max(0, 1 - offset / 32) * decay;
+      }
+
+      const energy = clamp(hover + pulse * 0.82, 0, 1);
+      const value = tile.value;
+      const lit = energy > 0.06;
+      ctx.fillStyle = lit ? light : ink;
+      const x = Math.round(tile.x);
+      const y = Math.round(tile.y);
+      if (!value && energy < 0.045) {
+        ctx.globalAlpha = 0.19 * tile.vignette ** 1.25;
+        ctx.fillRect(x, y, 1, 1);
+        continue;
+      }
+      const opacity = clamp(value * 0.84 + energy * 0.83, 0.05, 1);
+      const size = clamp(Math.round((value * 0.9 + energy) * step), 2, step - 1);
+      const left = x - Math.floor(size / 2);
+      const top = y - Math.floor(size / 2);
+      ctx.globalAlpha = opacity;
+      if (value < 0.62 && energy < 0.34 && size >= 3) {
+        ctx.fillRect(left, top, size, 1);
+        ctx.fillRect(left, top + size - 1, size, 1);
+        ctx.fillRect(left, top + 1, 1, size - 2);
+        ctx.fillRect(left + size - 1, top + 1, 1, size - 2);
+      } else {
+        ctx.fillRect(left, top, size, size);
+      }
+    }
+    ctx.globalAlpha = 1;
+    if (waves.length || target !== glow) requestDraw();
+  }
+
+  function localPoint(event) {
+    const bounds = canvas.getBoundingClientRect();
+    return { x: event.clientX - bounds.left, y: event.clientY - bounds.top };
+  }
+
+  function ripple(x, y) {
+    if (waves.length === 4) waves.shift();
+    waves.push({ x, y, time: performance.now() });
+    requestDraw();
+  }
+
+  canvas.addEventListener('pointermove', (event) => {
+    if (event.pointerType === 'touch') return;
+    Object.assign(pointer, localPoint(event), { inside: true });
+    requestDraw();
+  });
+
+  canvas.addEventListener('pointerleave', () => {
+    pointer.inside = false;
+    requestDraw();
+  });
+
+  canvas.addEventListener('click', (event) => {
+    const { x, y } = localPoint(event);
+    ripple(x, y);
+  });
+
+  button.addEventListener('click', () => ripple(width * 0.5, height * 0.5));
+  reduceMotion.addEventListener('change', requestDraw);
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', syncTheme);
+  const theme = new MutationObserver(syncTheme);
+  theme.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'style', 'data-theme'] });
+  resize();
+  new ResizeObserver(resize).observe(canvas);
+})();
+</script>
+</main>
+</body>
+</html>

@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="az">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Piksel əllər</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --background: light-dark(#f5f2eb, #13131b);
+    --foreground: light-dark(#201e27, #efe8de);
+    --blue: light-dark(#2e5bcb, #779dff);
+    --viz-series-1: var(--blue);
+    background: var(--background);
+    color: var(--foreground);
+    font: 15px/1.4 system-ui, sans-serif;
+  }
+  body { margin: 0; }
+  .demo { min-height: 100svh; display: grid; align-items: center; }
+  .demo > div { min-width: 0; }
+  .viz-row { display: flex; }
+  .btn {
+    background: transparent;
+    color: inherit;
+    border: 1px solid color-mix(in srgb, currentColor 24%, transparent);
+    border-radius: 99px;
+    padding: 10px 16px;
+    min-height: 44px;
+    font: inherit;
+  }
+  .btn:hover { background: color-mix(in srgb, currentColor 9%, transparent); }
+  .btn:focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }
+  .cursor-interaction, button { cursor: pointer; }
+  .demo #xalca-naxisi canvas { height: max(320px, calc(100svh - 64px)); }
+  .demo #piksel-eller canvas { height: max(210px, calc(100svh - 64px)); }
+</style>
+</head>
+<body>
+<main class="demo">
+<div id="piksel-eller">
+  <canvas class="cursor-interaction" role="img" aria-label="Tünd fonda ağ və mavi kvadratlardan yığılan iki əl. Kursor yaxınlaşanda barmaqlar bir-birinə tərəf uzanır."></canvas>
+  <div class="viz-row pixel-controls">
+    <button class="btn btn-ghost" type="button">İşıq impulsu</button>
+  </div>
+  <span class="pixel-ink" hidden></span>
+  <span class="pixel-blue" hidden></span>
+  <span class="pixel-night" hidden></span>
+</div>
+
+<style>
+  #piksel-eller canvas {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    min-height: 208px;
+    touch-action: pan-y;
+  }
+  #piksel-eller .pixel-controls {
+    justify-content: center;
+    padding-block: 8px 4px;
+  }
+  #piksel-eller .pixel-ink {
+    color: oklch(from var(--foreground) max(l, 0.9) calc(c * 0.16) h);
+  }
+  #piksel-eller .pixel-blue {
+    color: oklch(from var(--blue) clamp(0.56, l, 0.68) clamp(0.16, c, 0.27) 265);
+  }
+  #piksel-eller .pixel-night {
+    color: oklch(from var(--background) min(l, 0.135) calc(c * 0.4) h);
+  }
+</style>
+
+<script>
+(() => {
+  const root = document.getElementById('piksel-eller');
+  const canvas = root.querySelector('canvas');
+  const context = canvas.getContext('2d');
+  const button = root.querySelector('button');
+  const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+  const sin = Math.sin;
+  const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
+  const smooth = (n) => clamp(n, 0, 1) ** 2 * (3 - 2 * clamp(n, 0, 1));
+  const pointer = { active: false, x: 0, y: 0, amount: 0 };
+  const pulse = { x: 0, y: 0, time: -Infinity };
+
+  const leftOutline = new Path2D(
+    'M-24 339 C22 326 63 293 109 265 C142 244 167 234 209 238 ' +
+    'C240 238 261 251 282 257 C304 262 326 258 342 268 ' +
+    'C360 279 373 294 390 308 C402 319 421 325 427 335 ' +
+    'C432 346 419 353 407 351 C386 349 370 334 352 324 ' +
+    'L322 310 C310 305 303 307 291 309 ' +
+    'C304 320 313 332 316 344 C323 366 316 386 313 407 ' +
+    'C310 421 300 426 293 417 C287 407 293 386 284 374 ' +
+    'C274 360 266 355 249 347 C255 359 258 371 258 384 ' +
+    'C258 400 244 408 236 399 C231 393 235 379 229 372 ' +
+    'C222 363 211 361 201 353 C199 368 187 374 178 367 ' +
+    'C171 362 175 346 163 344 C132 351 107 353 80 352 ' +
+    'C48 357 23 377 -24 414 Z'
+  );
+
+  const rightOutline = new Path2D(
+    'M993 128 C944 145 900 150 852 167 C812 181 778 205 744 213 ' +
+    'C719 217 695 210 674 222 C648 237 625 247 597 258 ' +
+    'C571 268 544 274 528 287 C516 297 523 309 537 308 ' +
+    'C553 308 574 296 596 293 C626 291 655 279 674 273 ' +
+    'C677 282 669 294 663 306 C650 332 639 345 641 363 ' +
+    'C643 376 657 375 664 365 C673 351 678 337 692 325 ' +
+    'C687 342 675 362 679 377 C682 390 694 392 702 381 ' +
+    'C712 367 716 346 729 337 C724 353 720 373 731 379 ' +
+    'C741 385 751 372 755 358 C764 337 779 326 790 311 ' +
+    'C807 289 811 274 824 267 C859 248 902 248 937 242 ' +
+    'C962 238 976 237 993 237 Z'
+  );
+
+  function makeRelief(outline, axis, highlights) {
+    const source = document.createElement('canvas');
+    source.width = 960;
+    source.height = 540;
+    const pen = source.getContext('2d', { willReadFrequently: true });
+    pen.clip(outline);
+
+    const base = pen.createLinearGradient(...axis);
+    for (const [stop, value] of [[0, 26], [0.24, 63], [0.46, 118], [0.64, 164], [0.84, 104], [1, 27]]) {
+      base.addColorStop(stop, 'rgb(' + value + ' ' + value + ' ' + value + ')');
+    }
+    pen.fillStyle = base;
+    pen.fillRect(0, 0, 960, 540);
+
+    for (const [x, y, rx, ry, angle, strength] of highlights) {
+      pen.save();
+      pen.translate(x, y);
+      pen.rotate(angle);
+      pen.scale(rx, ry);
+      const glow = pen.createRadialGradient(0, 0, 0, 0, 0, 1);
+      const color = strength > 0 ? '255 255 255' : '0 0 0';
+      glow.addColorStop(0, 'rgb(' + color + ' / ' + Math.abs(strength) + ')');
+      glow.addColorStop(1, 'rgb(' + color + ' / 0)');
+      pen.fillStyle = glow;
+      pen.fillRect(-1, -1, 2, 2);
+      pen.restore();
+    }
+
+    pen.globalAlpha = 0.52;
+    pen.strokeStyle = '#fff';
+    pen.lineWidth = 3.4;
+    pen.stroke(outline);
+    return pen.getImageData(0, 0, 960, 540).data;
+  }
+
+  const leftRelief = makeRelief(leftOutline, [185, 414, 185, 219], [
+    [105, 280, 132, 31, -0.55, 0.68], [202, 271, 67, 37, 0.22, 0.64],
+    [312, 278, 70, 20, 0.12, 0.78], [385, 318, 63, 12, 0.53, 0.66],
+    [407, 337, 23, 11, 0.33, 0.95], [267, 325, 63, 18, 0.42, -0.84],
+    [299, 377, 9, 47, 0.06, 0.84], [244, 375, 10, 25, -0.29, 0.55],
+    [94, 338, 127, 32, -0.30, -0.84], [143, 315, 75, 15, -0.18, 0.46],
+  ]);
+  const rightRelief = makeRelief(rightOutline, [803, 376, 776, 132], [
+    [872, 192, 157, 34, -0.31, 0.77], [732, 237, 72, 25, -0.14, 0.69],
+    [610, 272, 85, 12, -0.34, 0.76], [540, 295, 34, 10, -0.35, 0.96],
+    [778, 287, 91, 19, -0.36, -0.80], [694, 284, 38, 13, -0.53, 0.54],
+    [660, 345, 8, 37, 0.45, 0.84], [696, 354, 9, 37, 0.49, 0.68],
+    [744, 348, 9, 37, 0.39, 0.63], [907, 231, 145, 23, -0.18, -0.62],
+  ]);
+
+  let width, height, step, pixel, tiles, palette;
+  let frame = 0;
+  let lastPaint = -Infinity;
+  let visible = true;
+  let reach = 0;
+
+  function sample(relief, x, y) {
+    const px = Math.round(x);
+    const py = Math.round(y);
+    if (px < 0 || px >= 960 || py < 0 || py >= 540) return 0;
+    const offset = (py * 960 + px) * 4;
+    return (relief[offset] / 255) * (relief[offset + 3] / 255);
+  }
+
+  function hash(x, y) {
+    const bits = Math.imul(x + 53, 1597334677) ^ Math.imul(y + 71, 3812015801);
+    return ((bits ^ (bits >>> 13)) >>> 0) / 4294967296;
+  }
+
+  function resize() {
+    const bounds = canvas.getBoundingClientRect();
+    width = bounds.width;
+    height = bounds.height;
+    if (!width || !height) return;
+
+    const ratio = Math.min(devicePixelRatio || 1, 2);
+    canvas.width = Math.round(width * ratio);
+    canvas.height = Math.round(height * ratio);
+    context.setTransform(ratio, 0, 0, ratio, 0, 0);
+    step = width < 420 ? 3.5 : 5;
+    pixel = Math.max(1 / ratio, Math.floor(step * 0.27 * ratio) / ratio);
+
+    const scale = Math.min(width / 960, height / 540);
+    const columns = Math.floor(width / step);
+    const rows = Math.floor(height / step);
+    tiles = Array.from({ length: rows * columns }, (_, index) => {
+      const column = index % columns;
+      const row = Math.floor(index / columns);
+      const x = width / 2 + (column - (columns - 1) / 2) * step;
+      const y = height / 2 + (row - (rows - 1) / 2) * step;
+      const u = 480 + (x - width / 2) / scale;
+      const v = 268 + (y - height / 2) / scale;
+      const fade = Math.hypot((u - 480) / 530, (v - 290) / 345);
+      return { x, y, u, v, fade, grain: hash(column, row), pattern: hash(row, column + 101) };
+    });
+    syncTheme();
+  }
+
+  function syncTheme() {
+    palette = ['night', 'ink', 'blue'].map((name) =>
+      getComputedStyle(root.querySelector('.pixel-' + name)).color
+    );
+    schedule();
+  }
+
+  function schedule() {
+    if (!frame && visible && tiles) frame = requestAnimationFrame(draw);
+  }
+
+  function mark(tile, size, pattern) {
+    const x = Math.round(tile.x - size / 2);
+    const y = Math.round(tile.y - size / 2);
+    if (size <= pixel || pattern < 0.28) {
+      context.fillRect(x, y, size, size);
+      return;
+    }
+    if (pattern < 0.64) {
+      context.fillRect(x, y, pixel, size);
+      context.fillRect(x + size - pixel, y, pixel, pixel);
+      if (pattern > 0.43) context.fillRect(x + size - pixel, y + size - pixel, pixel, pixel);
+      return;
+    }
+    context.fillRect(x, y, pixel, pixel);
+    context.fillRect(x + size - pixel, y + size - pixel, pixel, pixel);
+    if (pattern > 0.80) context.fillRect(x, y + size - pixel, pixel, pixel);
+  }
+
+  function draw(time) {
+    frame = 0;
+    if (!visible) return;
+    const still = reducedMotion.matches;
+    const age = Math.max(0, time - pulse.time);
+    const duration = still ? 420 : 1450;
+    const delta = time - lastPaint;
+    if (!still && delta < 24) {
+      schedule();
+      return;
+    }
+    lastPaint = time;
+
+    const approach = pointer.active
+      ? 1 - smooth(Math.hypot((pointer.x - width * 0.5) / (width * 0.36), (pointer.y - height * 0.54) / (height * 0.43)))
+      : 0;
+    const easing = still ? 1 : 1 - Math.exp(-Math.min(delta, 85) / 135);
+    pointer.amount += (Number(pointer.active) - pointer.amount) * easing;
+    reach += (approach - reach) * easing;
+    const pulsing = age < duration;
+    const impulse = pulsing ? Math.sin(Math.PI * age / duration) : 0;
+    const front = still ? 24 : age * width * 0.00047;
+    const bandWidth = still ? 35 : Math.max(24, width * 0.075);
+    const hoverRadius = Math.max(62, width * 0.16);
+    const clock = still ? 0 : time * 0.001;
+    const drift = still ? 0 : 5 * sin(clock * 1.05);
+    const shift = still ? 0 : 34 * reach + 17 * impulse + drift;
+    const lift = still ? 0 : 5 * sin(clock * 0.83);
+    const [night, white, blue] = palette;
+    context.globalAlpha = 1;
+    context.fillStyle = night;
+    context.fillRect(0, 0, width, height);
+
+    for (const tile of tiles) {
+      const { x, y, u, v, grain, pattern, fade } = tile;
+      const left = u < 520 ? sample(leftRelief, u - shift, v - lift + reach * 8) : 0;
+      const right = u > 450 ? sample(rightRelief, u + shift * 0.83, v + lift - reach * 15) : 0;
+      const level = Math.max(left, right);
+      const hover = pointer.amount > 0.01
+        ? pointer.amount * (1 - smooth(Math.hypot(x - pointer.x, y - pointer.y) / hoverRadius))
+        : 0;
+      const ripple = pulsing
+        ? (1 - smooth(Math.abs(Math.hypot(x - pulse.x, y - pulse.y) - front) / bandWidth)) * (1 - age / duration)
+        : 0;
+      const twinkle = still ? 0.5 : 0.5 + 0.5 * sin(clock * (2.1 + grain * 3.0) + grain * 55);
+      const charged = grain > 0.92 - hover * 0.37 - ripple * 0.43;
+      const center = (1 - smooth(Math.hypot((u - 480) / 108, (v - 321) / 52))) * reach;
+      const blueHit = (hover * 0.55 + ripple * 0.9 + center * 0.5) * Number(charged);
+      if (level < 0.055) {
+        const ghost = Math.max(0, 1 - fade) * (0.023 + grain * 0.075);
+        const spark = blueHit * (0.34 + 0.66 * twinkle);
+        context.globalAlpha = Math.max(ghost, spark);
+        context.fillStyle = spark > ghost ? blue : white;
+        mark(tile, spark > 0.17 ? pixel * 2 : pixel, pattern);
+        continue;
+      }
+      const cobalt = charged || (grain > 0.81 && level < 0.37 && level > 0.17);
+      context.fillStyle = cobalt ? blue : white;
+      const density = level ** 0.80 * (0.54 + 0.46 * grain) + hover * 0.15 + ripple * 0.29;
+      context.globalAlpha = clamp(density * (0.90 + twinkle * (cobalt ? 0.52 : 0.18)) + blueHit * 0.36, 0.035, 1);
+      const size = density > 0.46 ? step * 0.78 : density > 0.22 ? pixel * 2.6 : pixel * (grain > 0.58 ? 2 : 1);
+      mark(tile, Math.max(pixel, size), pattern);
+    }
+
+    context.globalAlpha = 1;
+    if (!still || pulsing) schedule();
+  }
+
+  function point(event) {
+    const bounds = canvas.getBoundingClientRect();
+    return { x: event.clientX - bounds.left, y: event.clientY - bounds.top };
+  }
+
+  function flash(x, y) {
+    Object.assign(pulse, { x, y, time: performance.now() });
+    schedule();
+  }
+
+  canvas.addEventListener('pointermove', (event) => {
+    if (event.pointerType === 'touch') return;
+    Object.assign(pointer, point(event), { active: true });
+    schedule();
+  });
+  canvas.addEventListener('pointerleave', () => {
+    pointer.active = false;
+    schedule();
+  });
+  canvas.addEventListener('click', (event) => {
+    const { x, y } = point(event);
+    flash(x, y);
+  });
+  button.addEventListener('click', () => flash(width * 0.5, height * 0.59));
+  reducedMotion.addEventListener('change', schedule);
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', syncTheme);
+  new MutationObserver(syncTheme).observe(document.documentElement, {
+    attributes: true, attributeFilter: ['class', 'style', 'data-theme'],
+  });
+  new IntersectionObserver(([entry]) => {
+    visible = entry.isIntersecting;
+    schedule();
+  }).observe(canvas);
+  new ResizeObserver(resize).observe(canvas);
+  resize();
+})();
+</script>
+</main>
+</body>
+</html>
