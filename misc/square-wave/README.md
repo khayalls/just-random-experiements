@@ -1,4 +1,4 @@
-# Kvadrat dalğa
+# Square Wave
 
 A twisted ribbon sampled onto a square grid. Nearby squares light up as the pointer moves. Click, tap or use the button to send a wave across the grid.
 

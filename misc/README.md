@@ -4,6 +4,6 @@ Standalone visual and interaction experiments.
 
 | Part | What it tries out |
 | --- | --- |
-| [xalca-naxisi](xalca-naxisi/) | Carpet motifs drawn as an interactive woven background |
-| [piksel-eller](piksel-eller/) | Reaching hands rendered as white and cobalt pixels |
-| [kvadrat-dalga](kvadrat-dalga/) | A twisted ribbon on a reactive square grid |
+| [Carpet Pattern](carpet-pattern/) | Carpet motifs drawn as an interactive woven background |
+| [Pixel Hands](pixel-hands/) | Reaching hands rendered as white and cobalt pixels |
+| [Square Wave](square-wave/) | A twisted ribbon on a reactive square grid |

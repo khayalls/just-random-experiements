@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="az">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Piksel əllər</title>
+<title>Pixel Hands</title>
 <style>
   :root {
     color-scheme: light dark;
@@ -31,16 +31,16 @@
   .btn:hover { background: color-mix(in srgb, currentColor 9%, transparent); }
   .btn:focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }
   .cursor-interaction, button { cursor: pointer; }
-  .demo #xalca-naxisi canvas { height: max(320px, calc(100svh - 64px)); }
-  .demo #piksel-eller canvas { height: max(210px, calc(100svh - 64px)); }
+  .demo #carpet-pattern canvas { height: max(320px, calc(100svh - 64px)); }
+  .demo #pixel-hands canvas { height: max(210px, calc(100svh - 64px)); }
 </style>
 </head>
 <body>
 <main class="demo">
-<div id="piksel-eller">
-  <canvas class="cursor-interaction" role="img" aria-label="Tünd fonda ağ və mavi kvadratlardan yığılan iki əl. Kursor yaxınlaşanda barmaqlar bir-birinə tərəf uzanır."></canvas>
+<div id="pixel-hands">
+  <canvas class="cursor-interaction" role="img" aria-label="Two hands made of white and blue squares on a dark background. Move the pointer between them to bring the fingertips closer."></canvas>
   <div class="viz-row pixel-controls">
-    <button class="btn btn-ghost" type="button">İşıq impulsu</button>
+    <button class="btn btn-ghost" type="button">Send a pulse</button>
   </div>
   <span class="pixel-ink" hidden></span>
   <span class="pixel-blue" hidden></span>
@@ -48,31 +48,31 @@
 </div>
 
 <style>
-  #piksel-eller canvas {
+  #pixel-hands canvas {
     display: block;
     width: 100%;
     aspect-ratio: 16 / 9;
     min-height: 208px;
     touch-action: pan-y;
   }
-  #piksel-eller .pixel-controls {
+  #pixel-hands .pixel-controls {
     justify-content: center;
     padding-block: 8px 4px;
   }
-  #piksel-eller .pixel-ink {
+  #pixel-hands .pixel-ink {
     color: oklch(from var(--foreground) max(l, 0.9) calc(c * 0.16) h);
   }
-  #piksel-eller .pixel-blue {
+  #pixel-hands .pixel-blue {
     color: oklch(from var(--blue) clamp(0.56, l, 0.68) clamp(0.16, c, 0.27) 265);
   }
-  #piksel-eller .pixel-night {
+  #pixel-hands .pixel-night {
     color: oklch(from var(--background) min(l, 0.135) calc(c * 0.4) h);
   }
 </style>
 
 <script>
 (() => {
-  const root = document.getElementById('piksel-eller');
+  const root = document.getElementById('pixel-hands');
   const canvas = root.querySelector('canvas');
   const context = canvas.getContext('2d');
   const button = root.querySelector('button');

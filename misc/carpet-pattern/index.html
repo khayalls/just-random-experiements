@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="az">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Xalça naxışı</title>
+<title>Carpet Pattern</title>
 <style>
   :root {
     color-scheme: light dark;
@@ -31,27 +31,27 @@
   .btn:hover { background: color-mix(in srgb, currentColor 9%, transparent); }
   .btn:focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }
   .cursor-interaction, button { cursor: pointer; }
-  .demo #xalca-naxisi canvas { height: max(320px, calc(100svh - 64px)); }
-  .demo #piksel-eller canvas { height: max(210px, calc(100svh - 64px)); }
+  .demo #carpet-pattern canvas { height: max(320px, calc(100svh - 64px)); }
+  .demo #pixel-hands canvas { height: max(210px, calc(100svh - 64px)); }
 </style>
 </head>
 <body>
 <main class="demo">
-<div id="xalca-naxisi">
-  <canvas class="cursor-interaction" role="img" aria-label="Gecə mavisi fonda qırmızı, qızılı və krem rəngli xalça naxışları. Kursor işığı naxışların üstündən keçir. Klik və ya toxunuş dalğa yaradır."></canvas>
+<div id="carpet-pattern">
+  <canvas class="cursor-interaction" role="img" aria-label="Red, gold, and cream carpet motifs on a midnight-blue background. Move the pointer to sweep light across the pattern. Click or tap to send a ripple."></canvas>
   <div class="viz-row carpet-controls">
-    <button class="btn btn-ghost" type="button">Naxışı canlandır</button>
+    <button class="btn btn-ghost" type="button">Send a ripple</button>
   </div>
 </div>
 
 <style>
-  #xalca-naxisi canvas {
+  #carpet-pattern canvas {
     display: block;
     width: 100%;
     height: clamp(330px, 57vw, 570px);
     touch-action: pan-y;
   }
-  #xalca-naxisi .carpet-controls {
+  #carpet-pattern .carpet-controls {
     justify-content: center;
     padding-block: 8px 4px;
   }
@@ -59,7 +59,7 @@
 
 <script>
 (() => {
-  const root = document.getElementById('xalca-naxisi');
+  const root = document.getElementById('carpet-pattern');
   const canvas = root.querySelector('canvas');
   const view = canvas.getContext('2d', { alpha: false });
   const art = document.createElement('canvas');

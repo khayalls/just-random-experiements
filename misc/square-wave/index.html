@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="az">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Kvadrat dalğa</title>
+<title>Square Wave</title>
 <style>
   :root {
     color-scheme: light dark;
@@ -31,39 +31,39 @@
   .btn:hover { background: color-mix(in srgb, currentColor 9%, transparent); }
   .btn:focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }
   .cursor-interaction, button { cursor: pointer; }
-  .demo #xalca-naxisi canvas { height: max(320px, calc(100svh - 64px)); }
-  .demo #piksel-eller canvas { height: max(210px, calc(100svh - 64px)); }
+  .demo #carpet-pattern canvas { height: max(320px, calc(100svh - 64px)); }
+  .demo #pixel-hands canvas { height: max(210px, calc(100svh - 64px)); }
 </style>
 </head>
 <body>
 <main class="demo">
-<div id="kvadrat-dalga">
-  <canvas class="cursor-interaction" role="img" aria-label="Xırda kvadratların yaratdığı burulmuş halqa. Kursoru gəzdirdikdə kvadratlar işıqlanır, toxunduqda dalğa yayılır."></canvas>
+<div id="square-wave">
+  <canvas class="cursor-interaction" role="img" aria-label="A twisted ring made of tiny squares. Move the pointer to light up nearby squares. Click or tap to send a wave."></canvas>
   <div class="viz-row wave-controls">
-    <button class="btn btn-ghost" type="button">Dalğa yarat</button>
+    <button class="btn btn-ghost" type="button">Make a wave</button>
   </div>
   <span class="wave-ink" hidden></span>
   <span class="wave-light" hidden></span>
 </div>
 
 <style>
-  #kvadrat-dalga canvas {
+  #square-wave canvas {
     display: block;
     width: 100%;
     height: clamp(244px, 55vw, 410px);
     touch-action: pan-y;
   }
-  #kvadrat-dalga .wave-controls {
+  #square-wave .wave-controls {
     justify-content: center;
     padding-block: 8px 4px;
   }
-  #kvadrat-dalga .wave-ink { color: var(--foreground); }
-  #kvadrat-dalga .wave-light { color: var(--viz-series-1, var(--blue, var(--foreground))); }
+  #square-wave .wave-ink { color: var(--foreground); }
+  #square-wave .wave-light { color: var(--viz-series-1, var(--blue, var(--foreground))); }
 </style>
 
 <script>
 (() => {
-  const root = document.getElementById('kvadrat-dalga');
+  const root = document.getElementById('square-wave');
   const canvas = root.querySelector('canvas');
   const ctx = canvas.getContext('2d');
   const button = root.querySelector('button');
